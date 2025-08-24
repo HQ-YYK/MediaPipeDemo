@@ -1,0 +1,23 @@
+# 基础构建工具（解决Python 3.12兼容性问题）
+setuptools>=68.0.0
+wheel>=0.41.0
+
+# Web框架
+flask==2.3.3
+flask-cors==4.0.0
+
+# 生产级WSGI服务器
+waitress>=3.0.0
+
+# AI和计算机视觉 - 升级到 MediaPipe 2.0+
+mediapipe>=0.10.8
+opencv-python>=4.8.0
+
+# 数据处理
+numpy>=1.26.0
+Pillow>=10.0.0
+
+# 开发工具（可选）
+# pytest==7.4.0
+# black==23.7.0
+# flake8==6.0.0
