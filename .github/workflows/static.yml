@@ -34,7 +34,7 @@ jobs:
         working-directory: './frontend'
         env:
           # 如果您的仓库不是username.github.io，那么BASE_PATH应该是您的仓库名
-          VITE_BASE_PATH: '/MediaPipeDemo/'
+          VITE_BASE_PATH: '/'
       - name: Setup Pages
         uses: actions/configure-pages@v5
       - name: Upload artifact
