@@ -26,7 +26,7 @@ export default defineConfig({
       output: {
         manualChunks: {
           vendor: ['react', 'react-dom'],
-          mediapipe: ['@mediapipe/pose', '@mediapipe/camera_utils'],
+          mediapipe: ['@mediapipe/tasks-vision'],
           three: ['three'],
         },
       },
@@ -35,7 +35,7 @@ export default defineConfig({
   // 依赖预构建优化
   optimizeDeps: {
     include: ['react', 'react-dom', 'three'],
-    exclude: ['@mediapipe/pose', '@mediapipe/camera_utils'],
+    exclude: ['@mediapipe/tasks-vision'],
     esbuildOptions: {
       target: 'es2020',
     },
