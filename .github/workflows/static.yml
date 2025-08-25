@@ -24,23 +24,22 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: '18'  # 使用您项目所需的Node版本
+          node-version: '18'
           cache: 'npm'
+          cache-dependency-path: 'frontend/package-lock.json'  # 明确指定锁文件路径
       - name: Install dependencies
         run: npm install
-        working-directory: './frontend'  # 如果您的项目在frontend目录下，请确保进入该目录
+        working-directory: './frontend'
       - name: Build with Vite
         run: npm run build
         working-directory: './frontend'
         env:
-          # 如果您的仓库不是username.github.io，那么BASE_PATH应该是您的仓库名
-          VITE_BASE_PATH: '/'
+          VITE_BASE_PATH: '/MediaPipeDemo/'
       - name: Setup Pages
         uses: actions/configure-pages@v5
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          # 上传构建输出的目录，Vite默认是dist目录
           path: './frontend/dist'
       - name: Deploy to GitHub Pages
         id: deployment
