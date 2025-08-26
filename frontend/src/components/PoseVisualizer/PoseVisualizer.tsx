@@ -1,6 +1,5 @@
 import React, { useEffect, useRef } from 'react';
 import * as THREE from 'three';
-import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
 import { PoseData } from '../../types';
 import './PoseVisualizer.css';
 
@@ -13,7 +12,7 @@ const PoseVisualizer: React.FC<PoseVisualizerProps> = ({ poseData }) => {
   const sceneRef = useRef<THREE.Scene | null>(null);
   const cameraRef = useRef<THREE.PerspectiveCamera | null>(null);
   const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
-  const controlsRef = useRef<OrbitControls | null>(null);
+  const controlsRef = useRef<any | null>(null);
   const landmarksRef = useRef<THREE.Mesh[]>([]);
   const connectionsRef = useRef<THREE.Line[]>([]);
   const skeletonRef = useRef<THREE.Group | null>(null);
@@ -44,30 +43,39 @@ const PoseVisualizer: React.FC<PoseVisualizerProps> = ({ poseData }) => {
     // 创建渲染器
     const renderer = new THREE.WebGLRenderer({ 
       antialias: true,
-      alpha: true
+      alpha: true,
+      powerPreference: 'high-performance'
     });
     renderer.setSize(mountElement.clientWidth, mountElement.clientHeight);
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-    renderer.setPixelRatio(window.devicePixelRatio);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
     rendererRef.current = renderer;
 
     // 添加轨道控制 - 限制旋转范围
-    const controls = new OrbitControls(camera, renderer.domElement);
-    controls.enableDamping = true;
-    controls.dampingFactor = 0.05;
-    controls.screenSpacePanning = false;
-    controls.minDistance = 4;
-    controls.maxDistance = 6;
-    
-    // 限制旋转角度 - 只能进行小幅度的原地旋转
-    controls.minAzimuthAngle = -Math.PI / 6; // -30度
-    controls.maxAzimuthAngle = Math.PI / 6;  // +30度
-    controls.minPolarAngle = Math.PI / 2 - Math.PI / 6; // 60度
-    controls.maxPolarAngle = Math.PI / 2 + Math.PI / 6; // 120度
-    
-    controls.enablePan = false; // 禁用平移
-    controlsRef.current = controls;
+    let controls: any;
+    // 动态导入 OrbitControls，避免类型/解析报错
+    // Vite 使用 ESM，需要 .js 扩展名
+    // eslint-disable-next-line @typescript-eslint/no-floating-promises
+    (async () => {
+      const module = await import('three/examples/jsm/controls/OrbitControls.js');
+      const OrbitControls = module.OrbitControls;
+      controls = new OrbitControls(camera, renderer.domElement);
+      controls.enableDamping = true;
+      controls.dampingFactor = 0.05;
+      controls.screenSpacePanning = false;
+      controls.minDistance = 4;
+      controls.maxDistance = 6;
+      
+      // 限制旋转角度 - 只能进行小幅度的原地旋转
+      controls.minAzimuthAngle = -Math.PI / 6; // -30度
+      controls.maxAzimuthAngle = Math.PI / 6;  // +30度
+      controls.minPolarAngle = Math.PI / 2 - Math.PI / 6; // 60度
+      controls.maxPolarAngle = Math.PI / 2 + Math.PI / 6; // 120度
+      
+      controls.enablePan = false; // 禁用平移
+      controlsRef.current = controls;
+    })();
 
     // 添加到DOM
     mountElement.appendChild(renderer.domElement);
@@ -97,8 +105,17 @@ const PoseVisualizer: React.FC<PoseVisualizerProps> = ({ poseData }) => {
     skeletonRef.current = skeletonGroup;
 
     // 动画循环
-    const animate = () => {
+    let lastFrameTime = 0;
+    const targetDelta = 1000 / 30; // ~30 FPS
+    const animate = (time?: number) => {
       animationIdRef.current = requestAnimationFrame(animate);
+      if (time === undefined) {
+        renderer.render(scene, camera);
+        return;
+      }
+      const delta = time - lastFrameTime;
+      if (delta < targetDelta) return;
+      lastFrameTime = time;
       controlsRef.current?.update();
       renderer.render(scene, camera);
     };
@@ -109,7 +126,7 @@ const PoseVisualizer: React.FC<PoseVisualizerProps> = ({ poseData }) => {
       if (animationIdRef.current) {
         cancelAnimationFrame(animationIdRef.current);
       }
-      if (controlsRef.current) {
+      if (controlsRef.current && typeof controlsRef.current.dispose === 'function') {
         controlsRef.current.dispose();
       }
       mountElement.removeChild(renderer.domElement);

@@ -47,6 +47,7 @@ const CameraCapture: React.FC<CameraCaptureProps> = ({ onPoseDetection }) => {
   const poseLandmarkerRef = useRef<PoseLandmarker | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const animationFrameRef = useRef<number | null>(null);
+  const lastDetectTimeRef = useRef<number>(0);
   const [isInitialized, setIsInitialized] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loadingStatus, setLoadingStatus] = useState<string>('准备中...');
@@ -104,7 +105,8 @@ const CameraCapture: React.FC<CameraCaptureProps> = ({ onPoseDetection }) => {
           video: {
             width: 640,
             height: 480,
-            facingMode: 'user'
+            facingMode: 'user',
+            frameRate: { ideal: 30, max: 30 }
           }
         })
       ]);
@@ -138,25 +140,29 @@ const CameraCapture: React.FC<CameraCaptureProps> = ({ onPoseDetection }) => {
   const startPoseDetection = () => {
     const processFrame = async () => {
       if (poseLandmarkerRef.current && videoRef.current && videoRef.current.readyState === 4) {
-        const startTimeMs = performance.now();
-        const results = poseLandmarkerRef.current.detectForVideo(videoRef.current, startTimeMs);
+        const now = performance.now();
+        const elapsed = now - lastDetectTimeRef.current;
+        if (elapsed >= 33) { // ~30 FPS 节流
+          lastDetectTimeRef.current = now;
+          const results = poseLandmarkerRef.current.detectForVideo(videoRef.current, now);
         
-        if (results.landmarks && results.landmarks.length > 0) {
-          const landmarks = results.landmarks[0].map((landmark: any, index: number) => ({
-            id: index,
-            x: landmark.x,
-            y: landmark.y,
-            z: landmark.z,
-            visibility: landmark.visibility || 1.0
-          }));
+          if (results.landmarks && results.landmarks.length > 0) {
+            const landmarks = results.landmarks[0].map((landmark: any, index: number) => ({
+              id: index,
+              x: landmark.x,
+              y: landmark.y,
+              z: landmark.z,
+              visibility: landmark.visibility || 1.0
+            }));
 
-          const poseData: PoseData = {
-            success: true,
-            landmarks,
-            connections: POSE_CONNECTIONS
-          };
+            const poseData: PoseData = {
+              success: true,
+              landmarks,
+              connections: POSE_CONNECTIONS
+            };
 
-          onPoseDetection(poseData);
+            onPoseDetection(poseData);
+          }
         }
       }
       

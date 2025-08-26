@@ -53,3 +53,25 @@ export interface ThreeSceneRefs {
   landmarks: THREE.Mesh[];
   connections: THREE.Line[];
 }
+
+// 轻量声明修复 OrbitControls 的类型解析（避免编译错误，实际类型由 three 提供）
+declare module 'three/examples/jsm/controls/OrbitControls' {
+  import { Camera } from 'three';
+  import { EventDispatcher } from 'three';
+  export class OrbitControls extends EventDispatcher<any> {
+    constructor(object: Camera, domElement?: HTMLElement);
+    enabled: boolean;
+    enableDamping: boolean;
+    dampingFactor: number;
+    screenSpacePanning: boolean;
+    minDistance: number;
+    maxDistance: number;
+    minAzimuthAngle: number;
+    maxAzimuthAngle: number;
+    minPolarAngle: number;
+    maxPolarAngle: number;
+    enablePan: boolean;
+    update(): void;
+    dispose(): void;
+  }
+}
