@@ -20,6 +20,12 @@ export interface PoseData {
     leftShoulder?: number;
     rightShoulder?: number;
   };
+  // 新增：面部与双手
+  faceLandmarks?: Landmark[];
+  faceConnections?: number[][];
+  leftHandLandmarks?: Landmark[];
+  rightHandLandmarks?: Landmark[];
+  handConnections?: number[][];
 }
 
 export interface PoseDetectionResponse {
@@ -47,31 +53,12 @@ export interface CameraState {
 
 // Three.js 相关类型
 export interface ThreeSceneRefs {
-  scene: THREE.Scene | null;
-  camera: THREE.PerspectiveCamera | null;
-  renderer: THREE.WebGLRenderer | null;
-  landmarks: THREE.Mesh[];
-  connections: THREE.Line[];
+  scene: any | null;
+  camera: any | null;
+  renderer: any | null;
+  landmarks: any[];
+  connections: any[];
 }
 
 // 轻量声明修复 OrbitControls 的类型解析（避免编译错误，实际类型由 three 提供）
-declare module 'three/examples/jsm/controls/OrbitControls' {
-  import { Camera } from 'three';
-  import { EventDispatcher } from 'three';
-  export class OrbitControls extends EventDispatcher<any> {
-    constructor(object: Camera, domElement?: HTMLElement);
-    enabled: boolean;
-    enableDamping: boolean;
-    dampingFactor: number;
-    screenSpacePanning: boolean;
-    minDistance: number;
-    maxDistance: number;
-    minAzimuthAngle: number;
-    maxAzimuthAngle: number;
-    minPolarAngle: number;
-    maxPolarAngle: number;
-    enablePan: boolean;
-    update(): void;
-    dispose(): void;
-  }
-}
+// 移除对 three 类型的直接依赖，避免构建环境下的类型解析问题

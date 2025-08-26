@@ -5,9 +5,10 @@ import './PoseVisualizer.css';
 
 interface PoseVisualizerProps {
   poseData: PoseData | null;
+  onReady?: () => void;
 }
 
-const PoseVisualizer: React.FC<PoseVisualizerProps> = ({ poseData }) => {
+const PoseVisualizer: React.FC<PoseVisualizerProps> = ({ poseData, onReady }) => {
   const mountRef = useRef<HTMLDivElement>(null);
   const sceneRef = useRef<THREE.Scene | null>(null);
   const cameraRef = useRef<THREE.PerspectiveCamera | null>(null);
@@ -42,14 +43,13 @@ const PoseVisualizer: React.FC<PoseVisualizerProps> = ({ poseData }) => {
 
     // 创建渲染器
     const renderer = new THREE.WebGLRenderer({ 
-      antialias: true,
+      antialias: false,
       alpha: true,
       powerPreference: 'high-performance'
     });
     renderer.setSize(mountElement.clientWidth, mountElement.clientHeight);
-    renderer.shadowMap.enabled = true;
-    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
+    renderer.shadowMap.enabled = false;
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.2));
     rendererRef.current = renderer;
 
     // 添加轨道控制 - 限制旋转范围
@@ -81,21 +81,21 @@ const PoseVisualizer: React.FC<PoseVisualizerProps> = ({ poseData }) => {
     mountElement.appendChild(renderer.domElement);
 
     // 增强光源 - 提高亮度
-    const ambientLight = new THREE.AmbientLight(0x606060, 1.2);
+    const ambientLight = new THREE.AmbientLight(0x606060, 0.9);
     scene.add(ambientLight);
 
-    const directionalLight = new THREE.DirectionalLight(0xffffff, 1.2);
+    const directionalLight = new THREE.DirectionalLight(0xffffff, 0.9);
     directionalLight.position.set(5, 10, 7);
     directionalLight.castShadow = true;
     scene.add(directionalLight);
 
     // 添加补光
-    const fillLight = new THREE.DirectionalLight(0x7777ff, 0.7);
+    const fillLight = new THREE.DirectionalLight(0x7777ff, 0.5);
     fillLight.position.set(-5, -5, -5);
     scene.add(fillLight);
 
     // 添加点光源增强细节
-    const pointLight = new THREE.PointLight(0x4ecdc4, 1.0, 100);
+    const pointLight = new THREE.PointLight(0x4ecdc4, 0.7, 80);
     pointLight.position.set(0, 3, 3);
     scene.add(pointLight);
 
@@ -120,6 +120,11 @@ const PoseVisualizer: React.FC<PoseVisualizerProps> = ({ poseData }) => {
       renderer.render(scene, camera);
     };
     animate();
+    // 在第一次渲染循环开始后触发就绪回调
+    if (typeof onReady === 'function') {
+      // 等一帧以确保 canvas 已插入并渲染
+      requestAnimationFrame(() => onReady());
+    }
 
     // 清理函数
     return () => {
@@ -165,19 +170,30 @@ const PoseVisualizer: React.FC<PoseVisualizerProps> = ({ poseData }) => {
 
     if (!landmarks || landmarks.length === 0) return;
 
-    // 更新角度显示
-    if (angleDisplayRef.current && jointAngles) {
-      let angleHtml = '<div class="angle-title">关节角度</div><div class="angle-grid">';
-      
-      if (jointAngles.leftElbow) angleHtml += `<div class="angle-item"><span class="angle-label">左肘:</span><span class="angle-value">${jointAngles.leftElbow}°</span></div>`;
-      if (jointAngles.rightElbow) angleHtml += `<div class="angle-item"><span class="angle-label">右肘:</span><span class="angle-value">${jointAngles.rightElbow}°</span></div>`;
-      if (jointAngles.leftKnee) angleHtml += `<div class="angle-item"><span class="angle-label">左膝:</span><span class="angle-value">${jointAngles.leftKnee}°</span></div>`;
-      if (jointAngles.rightKnee) angleHtml += `<div class="angle-item"><span class="angle-label">右膝:</span><span class="angle-value">${jointAngles.rightKnee}°</span></div>`;
-      if (jointAngles.leftShoulder) angleHtml += `<div class="angle-item"><span class="angle-label">左肩:</span><span class="angle-value">${jointAngles.leftShoulder}°</span></div>`;
-      if (jointAngles.rightShoulder) angleHtml += `<div class="angle-item"><span class="angle-label">右肩:</span><span class="angle-value">${jointAngles.rightShoulder}°</span></div>`;
-      
-      angleHtml += '</div>';
-      angleDisplayRef.current.innerHTML = angleHtml;
+    // 更新角度显示：仅在有角度时显示
+    if (angleDisplayRef.current) {
+      if (jointAngles && (
+        jointAngles.leftElbow !== undefined ||
+        jointAngles.rightElbow !== undefined ||
+        jointAngles.leftKnee !== undefined ||
+        jointAngles.rightKnee !== undefined ||
+        jointAngles.leftShoulder !== undefined ||
+        jointAngles.rightShoulder !== undefined
+      )) {
+        let angleHtml = '<div class="angle-title">关节角度</div><div class="angle-grid">';
+        if (jointAngles.leftElbow !== undefined) angleHtml += `<div class="angle-item"><span class="angle-label">左肘:</span><span class="angle-value">${jointAngles.leftElbow}°</span></div>`;
+        if (jointAngles.rightElbow !== undefined) angleHtml += `<div class="angle-item"><span class="angle-label">右肘:</span><span class="angle-value">${jointAngles.rightElbow}°</span></div>`;
+        if (jointAngles.leftKnee !== undefined) angleHtml += `<div class="angle-item"><span class="angle-label">左膝:</span><span class="angle-value">${jointAngles.leftKnee}°</span></div>`;
+        if (jointAngles.rightKnee !== undefined) angleHtml += `<div class="angle-item"><span class="angle-label">右膝:</span><span class="angle-value">${jointAngles.rightKnee}°</span></div>`;
+        if (jointAngles.leftShoulder !== undefined) angleHtml += `<div class="angle-item"><span class="angle-label">左肩:</span><span class="angle-value">${jointAngles.leftShoulder}°</span></div>`;
+        if (jointAngles.rightShoulder !== undefined) angleHtml += `<div class="angle-item"><span class="angle-label">右肩:</span><span class="angle-value">${jointAngles.rightShoulder}°</span></div>`;
+        angleHtml += '</div>';
+        angleDisplayRef.current.style.display = 'block';
+        angleDisplayRef.current.innerHTML = angleHtml;
+      } else {
+        angleDisplayRef.current.style.display = 'none';
+        angleDisplayRef.current.innerHTML = '';
+      }
     }
 
     // 创建关节点 - 使用更大尺寸和更高对比度的颜色
@@ -192,7 +208,7 @@ const PoseVisualizer: React.FC<PoseVisualizerProps> = ({ poseData }) => {
         size = 0.15;
       }
 
-      const geometry = new THREE.SphereGeometry(size, 24, 24);
+      const geometry = new THREE.SphereGeometry(size, 16, 16);
       
       // 使用更高对比度的颜色
       let color = 0x00ff00;
@@ -256,12 +272,7 @@ const PoseVisualizer: React.FC<PoseVisualizerProps> = ({ poseData }) => {
       ));
 
       const geometry = new THREE.BufferGeometry().setFromPoints(points);
-      const material = new THREE.LineBasicMaterial({ 
-        color: 0xffffff,
-        linewidth: 5,
-        transparent: true,
-        opacity: 0.9
-      });
+      const material = new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.8 });
       
       const line = new THREE.Line(geometry, material);
       skeletonRef.current?.add(line);
@@ -275,8 +286,9 @@ const PoseVisualizer: React.FC<PoseVisualizerProps> = ({ poseData }) => {
       <div className="visualizer-header">
         <h3>3D 姿态可视化</h3>
       </div>
-      <div ref={mountRef} className="visualizer-container" />
-      <div ref={angleDisplayRef} className="angle-display"></div>
+      <div ref={mountRef} className="visualizer-container">
+        <div ref={angleDisplayRef} className="angle-display"></div>
+      </div>
     </div>
   );
 };

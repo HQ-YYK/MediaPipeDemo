@@ -118,8 +118,8 @@
   font-weight: 700;
 }
 
-/* 确保3D容器正确显示 */
-.visualizer-container > div {
+/* 确保3D容器正确显示：仅拉伸 canvas */
+.visualizer-container > canvas {
   width: 100% !important;
   height: 100% !important;
 }
@@ -136,16 +136,21 @@
   left: 0;
   right: 0;
   padding: 12px;
-  background: rgba(0, 0, 0, 0.7);
-  color: #fff;
+  background: linear-gradient(180deg, rgba(255,255,255,0.12), rgba(255,255,255,0.06));
+  backdrop-filter: blur(6px) saturate(120%);
+  border-top: 1px solid rgba(255,255,255,0.25);
+  color: #eaf6ff;
   font-size: 12px;
   z-index: 10;
+  width: auto !important;
+  height: auto !important;
+  pointer-events: none;
 }
 
 .angle-title {
-  font-weight: bold;
+  font-weight: 700;
   margin-bottom: 8px;
-  color: #4ecdc4;
+  color: #82e9de;
 }
 
 .angle-grid {
@@ -160,11 +165,11 @@
 }
 
 .angle-label {
-  color: #ccc;
+  color: #d0e7ff;
 }
 
 .angle-value {
-  color: #fff;
+  color: #ffffff;
   font-weight: bold;
 }
 

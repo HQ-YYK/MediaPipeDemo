@@ -5,6 +5,9 @@ import './CameraCapture.css';
 
 interface CameraCaptureProps {
   onPoseDetection: (poseData: PoseData) => void;
+  onReady?: () => void;
+  onStarted?: () => void;
+  onStopped?: () => void;
 }
 
 // 全局模型预加载
@@ -30,7 +33,7 @@ const preloadModel = async () => {
       numPoses: 1
     });
     
-    console.log('MediaPipe 模型预加载完成');
+    console.log('MediaPipe 模型预加载完成 (仅姿态)');
   } catch (err) {
     console.error('模型预加载失败:', err);
   } finally {
@@ -41,7 +44,7 @@ const preloadModel = async () => {
 // 立即开始预加载
 preloadModel();
 
-const CameraCapture: React.FC<CameraCaptureProps> = ({ onPoseDetection }) => {
+const CameraCapture: React.FC<CameraCaptureProps> = ({ onPoseDetection, onReady, onStarted, onStopped }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const poseLandmarkerRef = useRef<PoseLandmarker | null>(null);
@@ -87,12 +90,12 @@ const CameraCapture: React.FC<CameraCaptureProps> = ({ onPoseDetection }) => {
           // 如果预加载失败，重新加载
           setLoadingStatus('重新加载模型...');
           const vision = await FilesetResolver.forVisionTasks(
-            "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.9/wasm"
+            "/mediapipe/wasm"
           );
           
           return await PoseLandmarker.createFromOptions(vision, {
             baseOptions: {
-              modelAssetPath: "https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task",
+              modelAssetPath: "/models/pose_landmarker_lite.task",
               delegate: "GPU"
             },
             runningMode: "VIDEO",
@@ -125,6 +128,12 @@ const CameraCapture: React.FC<CameraCaptureProps> = ({ onPoseDetection }) => {
           startPoseDetection();
           setIsInitialized(true);
           setLoadingStatus('✅ 已连接');
+          if (typeof onReady === 'function') {
+            onReady();
+          }
+          if (typeof onStarted === 'function') {
+            onStarted();
+          }
         };
       }
 
@@ -136,18 +145,37 @@ const CameraCapture: React.FC<CameraCaptureProps> = ({ onPoseDetection }) => {
     }
   };
 
+  const stopCamera = () => {
+    if (animationFrameRef.current) {
+      cancelAnimationFrame(animationFrameRef.current);
+      animationFrameRef.current = null;
+    }
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(track => track.stop());
+      streamRef.current = null;
+    }
+    if (videoRef.current) {
+      videoRef.current.srcObject = null;
+    }
+    setIsInitialized(false);
+    setLoadingStatus('已停止');
+    if (typeof onStopped === 'function') {
+      onStopped();
+    }
+  };
+
   // 开始姿态检测
   const startPoseDetection = () => {
     const processFrame = async () => {
       if (poseLandmarkerRef.current && videoRef.current && videoRef.current.readyState === 4) {
         const now = performance.now();
         const elapsed = now - lastDetectTimeRef.current;
-        if (elapsed >= 33) { // ~30 FPS 节流
+        if (elapsed >= 33) { // ~30 FPS 姿态
           lastDetectTimeRef.current = now;
-          const results = poseLandmarkerRef.current.detectForVideo(videoRef.current, now);
+          const poseResults = poseLandmarkerRef.current.detectForVideo(videoRef.current, now);
         
-          if (results.landmarks && results.landmarks.length > 0) {
-            const landmarks = results.landmarks[0].map((landmark: any, index: number) => ({
+          if (poseResults.landmarks && poseResults.landmarks.length > 0) {
+            const landmarks = poseResults.landmarks[0].map((landmark: any, index: number) => ({
               id: index,
               x: landmark.x,
               y: landmark.y,
@@ -161,6 +189,8 @@ const CameraCapture: React.FC<CameraCaptureProps> = ({ onPoseDetection }) => {
               connections: POSE_CONNECTIONS
             };
 
+            // 不再采集面部和手部数据
+
             onPoseDetection(poseData);
           }
         }
@@ -173,18 +203,11 @@ const CameraCapture: React.FC<CameraCaptureProps> = ({ onPoseDetection }) => {
     processFrame();
   };
 
-  // 组件挂载时初始化
+  // 挂载时自动启动（保持原有行为），卸载时清理
   useEffect(() => {
-    initMediaPipe();
-
-    // 清理函数
+    void initMediaPipe();
     return () => {
-      if (animationFrameRef.current) {
-        cancelAnimationFrame(animationFrameRef.current);
-      }
-      if (streamRef.current) {
-        streamRef.current.getTracks().forEach(track => track.stop());
-      }
+      stopCamera();
       // 注意：不要关闭预加载的模型，因为它是全局共享的
       if (poseLandmarkerRef.current && poseLandmarkerRef.current !== preloadedPoseLandmarker) {
         poseLandmarkerRef.current.close();
@@ -209,9 +232,13 @@ const CameraCapture: React.FC<CameraCaptureProps> = ({ onPoseDetection }) => {
     <div className="camera-capture">
       <div className="camera-header">
         <h3>📷 相机捕获</h3>
-        <div className="status">
-          {isInitialized ? '✅ 已连接' : loadingStatus}
-        </div>
+        <div className="status">{isInitialized ? '✅ 已连接' : loadingStatus}</div>
+        <button
+          onClick={() => (isInitialized ? stopCamera() : initMediaPipe())}
+          className="camera-toggle-btn"
+        >
+          {isInitialized ? '停止相机' : '启动相机'}
+        </button>
       </div>
       
       <div className="camera-container">
@@ -229,7 +256,7 @@ const CameraCapture: React.FC<CameraCaptureProps> = ({ onPoseDetection }) => {
           height={480}
         />
         
-        {!isInitialized && (
+        {!isInitialized && loadingStatus !== '已停止' && (
           <div className="loading-overlay">
             <div className="loading-spinner"></div>
             <p>{loadingStatus}</p>

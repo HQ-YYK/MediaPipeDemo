@@ -2,8 +2,26 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 
 // https://vitejs.dev/config/
+// 开发期移除 tasks-vision sourcemap 注释，避免控制台警告
+const stripMediaPipeSourcemap = () => ({
+  name: 'strip-mediapipe-sourcemap',
+  enforce: 'pre' as const,
+  apply: 'serve' as const,
+  transform(code: string, id: string) {
+    if (id.includes('@mediapipe/tasks-vision/vision_bundle.mjs')) {
+      // Safely remove both single-line and block sourcemap comments
+      const withoutLine = code
+        .replace(/\n\s*\/\/[#@]\s*sourceMappingURL=.*$/gm, '')
+        .replace(/^\s*\/\/[#@]\s*sourceMappingURL=.*$/gm, '');
+      const withoutBlock = withoutLine.replace(/\/\*[#@]\s*sourceMappingURL=[\s\S]*?\*\//g, '');
+      return withoutBlock;
+    }
+    return null
+  }
+})
+
 export default defineConfig({
-  plugins: [react()],
+  plugins: [react(), stripMediaPipeSourcemap()],
   base: process.env.NODE_ENV === 'production' ? './' : '/',
   server: {
     port: 3000,

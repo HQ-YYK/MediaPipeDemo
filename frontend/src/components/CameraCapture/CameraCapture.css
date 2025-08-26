@@ -18,6 +18,24 @@
   flex-shrink: 0;
 }
 
+.camera-toggle-btn {
+  margin-left: 12px;
+  background: #4fc3f7;
+  color: #0a2540;
+  border: none;
+  padding: 8px 14px;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.2s ease;
+}
+
+.camera-toggle-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(79, 195, 247, 0.35);
+}
+
 .camera-header h3 {
   margin: 0;
   color: #e3f2fd;
